@@ -268,9 +268,12 @@ async function startCamera() {
         const overlay = document.getElementById('videoOverlay');
         if (overlay) overlay.classList.add('hidden');
 
-        // Show switch button if multiple cameras are likely available
+        // Show switch button and enable record button
         const switchBtn = document.getElementById('btnSwitchCam');
         if (switchBtn) switchBtn.style.display = 'inline-flex';
+
+        const recordBtn = document.getElementById('btnRecord');
+        if (recordBtn) recordBtn.disabled = false;
 
     } catch (err) {
         alert('Could not access camera: ' + err.message);
@@ -280,6 +283,62 @@ async function startCamera() {
 async function switchCamera() {
     currentFacingMode = (currentFacingMode === 'user') ? 'environment' : 'user';
     await startCamera();
+}
+
+function toggleRecording() {
+    if (!isRecording) startRecording();
+    else stopRecording();
+}
+
+function startRecording() {
+    recordedChunks = [];
+    recordSeconds = 0;
+    const btn = document.getElementById('btnRecord');
+
+    try {
+        // We use a dummy recorder for the UI flow since we aren't uploading anymore
+        // But we'll still use MediaRecorder if available for the 'feel'
+        if (window.MediaRecorder) {
+            mediaRecorder = new MediaRecorder(mediaStream);
+            mediaRecorder.ondataavailable = e => { if (e.data.size > 0) recordedChunks.push(e.data); };
+            mediaRecorder.onstop = () => {
+                document.getElementById('btnSubmitTask').disabled = false;
+            };
+            mediaRecorder.start();
+        } else {
+            document.getElementById('btnSubmitTask').disabled = false;
+        }
+
+        isRecording = true;
+        btn.classList.add('recording');
+        btn.innerHTML = '<span class="rec-dot"></span> Stop Recording';
+
+        const timerDisplay = document.getElementById('timerDisplay');
+        if (timerDisplay) timerDisplay.style.display = 'flex';
+
+        timerInterval = setInterval(() => {
+            recordSeconds++;
+            const m = Math.floor(recordSeconds / 60);
+            const s = recordSeconds % 60;
+            const timerCount = document.getElementById('timerCount');
+            if (timerCount) timerCount.textContent = `${m}:${s.toString().padStart(2, '0')}`;
+        }, 1000);
+    } catch (err) {
+        console.error('Recording failed:', err);
+        // Fallback: enable submit anyway
+        document.getElementById('btnSubmitTask').disabled = false;
+    }
+}
+
+function stopRecording() {
+    if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+    if (timerInterval) clearInterval(timerInterval);
+    isRecording = false;
+    const btn = document.getElementById('btnRecord');
+    if (btn) {
+        btn.classList.remove('recording');
+        btn.innerHTML = '<span class="rec-dot"></span> Re-record';
+    }
 }
 
 function submitTask() {
