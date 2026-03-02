@@ -19,7 +19,7 @@ const LS_NICKNAME = 'campushunt_nickname';      // String
 
 // Supabase config (using user's keys)
 const SUPABASE_URL = 'https://vskalrepzuzaneglzdez.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZza2FscmVwenV6YW5lZ2x6ZGV6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTY5OTY1OTYsImV4cCI6MjAzMjU3MjU5Nn0.aWd31fqNw-4w6Dwk-sD8CQ_umT2tBhZ';
+const SUPABASE_ANON_KEY = 'sb_publishable_aWd31fqNw-4w6Dwk-sD8CQ_umT2tBhZ';
 let supabase;
 
 // ---- Get station from URL param ----
