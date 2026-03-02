@@ -11,9 +11,25 @@ let isRecording = false;
 let timerInterval = null;
 let recordSeconds = 0;
 
+// Supabase Init
+const SUPABASE_URL = 'https://vskalrepzuzaneglzdez.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_aWd31fqNw-4w6Dwk-sD8CQ_umT2tBhZ';
+const supabase = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
+
 // LocalStorage keys
 const LS_COLLECTED = 'campushunt_collected';    // { stationId: letter | null }
 const LS_COMPLETED = 'campushunt_completed';    // [stationId, ...]
+const LS_SESSION = 'campushunt_session_id';      // unique id for tracking submissions
+
+// ---- Get or Create Session ID ----
+function getSessionId() {
+    let id = localStorage.getItem(LS_SESSION);
+    if (!id) {
+        id = 'user_' + Math.random().toString(36).substr(2, 9);
+        localStorage.setItem(LS_SESSION, id);
+    }
+    return id;
+}
 
 // ---- Get station from URL param ----
 function getStationFromURL() {
@@ -341,12 +357,69 @@ function stopRecording() {
     }
 }
 
-function submitTask() {
-    if (mediaStream) mediaStream.getTracks().forEach(t => t.stop());
-    const completed = getCompleted();
-    if (!completed.includes(currentStation.id)) completed.push(currentStation.id);
-    saveCompleted(completed);
-    showScreen('screen-task-done');
+async function submitTask() {
+    const btn = document.getElementById('btnSubmitTask');
+    const originalText = btn.innerHTML;
+
+    try {
+        if (mediaStream) mediaStream.getTracks().forEach(t => t.stop());
+
+        btn.disabled = true;
+        btn.innerHTML = '⏳ Uploading...';
+
+        let videoUrl = null;
+
+        // 1. Upload video if recorded
+        if (recordedChunks.length > 0 && supabase) {
+            const blob = new Blob(recordedChunks, { type: 'video/webm' });
+            const fileName = `${getSessionId()}_station${currentStation.id}_${Date.now()}.webm`;
+
+            const { data, error } = await supabase.storage
+                .from('task_videos')
+                .upload(fileName, blob);
+
+            if (error) throw error;
+
+            const { data: { publicUrl } } = supabase.storage
+                .from('task_videos')
+                .getPublicUrl(fileName);
+
+            videoUrl = publicUrl;
+        }
+
+        // 2. Log task submission
+        if (supabase) {
+            const { error: dbError } = await supabase
+                .from('hunt_tasks')
+                .insert([{
+                    session_id: getSessionId(),
+                    station_id: currentStation.id,
+                    video_url: videoUrl,
+                    status: 'completed'
+                }]);
+
+            if (dbError) console.error('DB Log Error:', dbError);
+        }
+
+        // 3. Mark locally complete
+        const completed = getCompleted();
+        if (!completed.includes(currentStation.id)) completed.push(currentStation.id);
+        saveCompleted(completed);
+
+        showScreen('screen-task-done');
+
+    } catch (err) {
+        console.error('Submission Failed:', err);
+        alert('Upload failed, but you can still proceed! Error: ' + err.message);
+
+        // Fallback: Proceed anyway
+        const completed = getCompleted();
+        if (!completed.includes(currentStation.id)) completed.push(currentStation.id);
+        saveCompleted(completed);
+        showScreen('screen-task-done');
+    } finally {
+        btn.innerHTML = originalText;
+    }
 }
 
 // ---- INIT ----
