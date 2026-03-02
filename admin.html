@@ -632,7 +632,9 @@
             if (el) el.classList.add('active');
             else {
                 // Fallback for auto-init
-                document.querySelector(`[onclick^="switchTab('${tabId}'"]`)?.classList.add('active');
+                document.querySelectorAll('.nav-link').forEach(link => {
+                    if (link.getAttribute('onclick').includes(`'${tabId}'`)) link.classList.add('active');
+                });
             }
             document.getElementById('tab-' + tabId).classList.add('active');
         }
@@ -674,8 +676,12 @@
                 const canvas = document.createElement('canvas');
                 canvas.id = 'qr-canvas-' + station.id;
                 try {
-                    await QRCode.toCanvas(canvas, url, { width: 180, margin: 1 });
-                    wrap.appendChild(canvas);
+                    if (window.QRCode) {
+                        await QRCode.toCanvas(canvas, url, { width: 180, margin: 1 });
+                        wrap.appendChild(canvas);
+                    } else {
+                        wrap.innerHTML = '<p style="color:red">QR Library Missing</p>';
+                    }
                 } catch (err) {
                     wrap.innerHTML = `<p style="color:red">QR Error</p>`;
                 }
@@ -684,6 +690,7 @@
 
         function downloadQR(id, name) {
             const canvas = document.getElementById('qr-canvas-' + id);
+            if (!canvas) return;
             const out = document.createElement('canvas');
             out.width = 280; out.height = 340;
             const ctx = out.getContext('2d');
@@ -698,8 +705,26 @@
             link.click();
         }
 
+        function buildSummaryTable() {
+            const tbody = document.getElementById('summaryBody');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+            STATION_DATA.forEach(s => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td style="font-family:'Space Mono',monospace;font-weight:700;color:var(--primary2)">${s.id}</td>
+                    <td><div style="font-weight:600">${s.name}</div></td>
+                    <td><span class="tbl-letter">${s.secretLetter}</span></td>
+                    <td style="max-width:250px;font-size:13px;color:var(--text2)">${s.question}</td>
+                    <td class="tbl-wrong" style="max-width:200px;font-size:12px">${s.funTask}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
         // --- Real-time Logic ---
         async function loadInitialData() {
+            if (!supabase) return;
             const { data: sessions } = await supabase.from('hunt_sessions').select('*');
             sessions?.forEach(s => participants[s.id] = { ...s, progress: [] });
 
@@ -711,6 +736,7 @@
             renderDashboard();
             loadVideos();
         }
+
 
         function subscribeToUpdates() {
             supabase.channel('custom-all-channel')
