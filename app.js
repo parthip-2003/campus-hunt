@@ -19,8 +19,8 @@ const LS_NICKNAME = 'campushunt_nickname';      // String
 
 // Supabase config (using user's keys)
 const SUPABASE_URL = 'https://vskalrepzuzaneglzdez.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable_aWd31fqNw-4w6Dwk-sD8CQ_umT2tBhZ';
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZza2FscmVwenV6YW5lZ2x6ZGV6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTY5OTY1OTYsImV4cCI6MjAzMjU3MjU5Nn0.aWd31fqNw-4w6Dwk-sD8CQ_umT2tBhZ';
+let supabase;
 
 // ---- Get station from URL param ----
 function getStationFromURL() {
@@ -422,6 +422,13 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 
 function initGameFlow() {
+    // Initialize Supabase safely
+    if (window.supabase) {
+        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    } else {
+        console.error("Supabase SDK not loaded!");
+    }
+
     currentStation = getStationFromURL();
 
     if (!currentStation) {

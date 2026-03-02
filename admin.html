@@ -8,10 +8,9 @@
     <link
         href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&family=Space+Mono:wght@400;700&display=swap"
         rel="stylesheet" />
-    <!-- QR Code library (Local) -->
-    <script src="qrcode.min.js"></script>
-    <!-- Supabase SDK -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&family=Space+Mono:wght@400;700&display=swap"
+        rel="stylesheet" />
     <style>
         *,
         *::before,
@@ -529,9 +528,9 @@
     <div class="config-section">
 
         <div class="admin-nav">
-            <div class="nav-link active" onclick="switchTab('qr')">QR Generator</div>
-            <div class="nav-link" onclick="switchTab('live')">Live Tracker 📡</div>
-            <div class="nav-link" onclick="switchTab('tasks')">Task Submissions 📹</div>
+            <div class="nav-link active" onclick="switchTab('qr', this)">QR Generator</div>
+            <div class="nav-link" onclick="switchTab('live', this)">Live Tracker 📡</div>
+            <div class="nav-link" onclick="switchTab('tasks', this)">Task Submissions 📹</div>
         </div>
 
         <div id="tab-qr" class="dashboard-container active">
@@ -617,20 +616,24 @@
     <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
     <script src="data.js"></script>
     <script>
-        // Supabase Configuration (Using your project keys)
+        // Configuration
         const SUPABASE_URL = 'https://vskalrepzuzaneglzdez.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZza2FscmVwenV6YW5lZ2x6ZGV6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTY5OTY1OTYsImV4cCI6MjAzMjU3MjU5Nn0.aWd31fqNw-4w6Dwk-sD8CQ_umT2tBhZ';
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+        let supabase;
         let currentBase = '';
         let participants = {};
 
         // --- Tab Switching ---
-        function switchTab(tabId) {
+        function switchTab(tabId, el) {
             document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
             document.querySelectorAll('.dashboard-container, .gallery-container').forEach(c => c.classList.remove('active'));
 
-            event.target.classList.add('active');
+            if (el) el.classList.add('active');
+            else {
+                // Fallback for auto-init
+                document.querySelector(`[onclick^="switchTab('${tabId}'"]`)?.classList.add('active');
+            }
             document.getElementById('tab-' + tabId).classList.add('active');
         }
 
@@ -776,14 +779,24 @@
 
         // --- Init ---
         window.addEventListener('DOMContentLoaded', () => {
+            // Initialize Supabase safely
+            if (window.supabase) {
+                supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            } else {
+                console.error("Supabase SDK not loaded!");
+            }
+
             const autoBase = window.location.href.replace('admin.html', '');
             document.getElementById('baseUrlInput').value = autoBase;
             document.getElementById('baseUrlInput').addEventListener('input', updateUrlPreview);
             updateUrlPreview();
             generateAllQRs();
+            buildSummaryTable();
 
-            loadInitialData();
-            subscribeToUpdates();
+            if (supabase) {
+                loadInitialData();
+                subscribeToUpdates();
+            }
         });
     </script>
 </body>
