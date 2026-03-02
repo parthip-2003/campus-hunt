@@ -503,16 +503,18 @@
 
                 // Generate QR
                 const wrap = document.getElementById('qr-wrap-' + station.id);
-                await QRCode.toCanvas(document.createElement('canvas'), url, {
-                    width: 180,
-                    margin: 1,
-                    color: { dark: '#0a0b0f', light: '#ffffff' }
-                }).then(canvas => {
-                    canvas.id = 'qr-canvas-' + station.id;
+                const canvas = document.createElement('canvas');
+                canvas.id = 'qr-canvas-' + station.id;
+                try {
+                    await QRCode.toCanvas(canvas, url, {
+                        width: 180,
+                        margin: 1,
+                        color: { dark: '#000000', light: '#ffffff' }
+                    });
                     wrap.appendChild(canvas);
-                }).catch(err => {
-                    wrap.innerHTML = '<p style="color:red;font-size:12px">QR Error</p>';
-                });
+                } catch (err) {
+                    wrap.innerHTML = '<p style="color:red;font-size:12px">QR Error: ' + err.message + '</p>';
+                }
             }
 
             updateUrlPreview();
