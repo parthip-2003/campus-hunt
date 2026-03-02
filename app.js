@@ -14,6 +14,13 @@ let recordSeconds = 0;
 // LocalStorage keys
 const LS_COLLECTED = 'campushunt_collected';    // { stationId: letter | null }
 const LS_COMPLETED = 'campushunt_completed';    // [stationId, ...]
+const LS_SESSION_ID = 'campushunt_session_id';  // UUID
+const LS_NICKNAME = 'campushunt_nickname';      // String
+
+// Supabase config (using user's keys)
+const SUPABASE_URL = 'https://vskalrepzuzaneglzdez.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_aWd31fqNw-4w6Dwk-sD8CQ_umT2tBhZ';
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // ---- Get station from URL param ----
 function getStationFromURL() {
@@ -34,6 +41,38 @@ function getCompleted() {
 }
 function saveCollected(obj) { localStorage.setItem(LS_COLLECTED, JSON.stringify(obj)); }
 function saveCompleted(arr) { localStorage.setItem(LS_COMPLETED, JSON.stringify(arr)); }
+
+// ---- Session Helpers ----
+function getSessionId() { return localStorage.getItem(LS_SESSION_ID); }
+function getNickname() { return localStorage.getItem(LS_NICKNAME); }
+
+async function startHuntSession() {
+    const input = document.getElementById('nicknameInput');
+    const nick = input.value.trim();
+    if (!nick) {
+        alert('Please enter a nickname to start!');
+        return;
+    }
+
+    // Create session in Supabase
+    const { data, error } = await supabase
+        .from('hunt_sessions')
+        .insert([{ nickname: nick }])
+        .select()
+        .single();
+
+    if (error) {
+        console.error('Session error:', error);
+        alert('Could not start session. Please check your internet.');
+        return;
+    }
+
+    localStorage.setItem(LS_SESSION_ID, data.id);
+    localStorage.setItem(LS_NICKNAME, nick);
+
+    // Continue to game
+    initGameFlow();
+}
 
 // ---- Show a screen ----
 function showScreen(id) {
@@ -104,12 +143,23 @@ function handleAnswer(selectedIndex, station) {
 
     if (correct) {
         selectedBtn.classList.add('correct-ans');
+        // Sync correct answer status to Supabase
+        syncProgress(station.id, 'correct');
         setTimeout(() => showCorrectScreen(station), 800);
     } else {
         selectedBtn.classList.add('wrong-ans');
         correctBtn.classList.add('correct-ans');
         setTimeout(() => showWrongScreen(station), 900);
     }
+}
+
+async function syncProgress(stationId, status) {
+    const sessionId = getSessionId();
+    if (!sessionId) return;
+
+    await supabase.from('hunt_progress').insert([
+        { session_id: sessionId, station_id: stationId, status: status }
+    ]);
 }
 
 // ---- Correct Answer Screen ----
@@ -309,10 +359,44 @@ function stopRecording() {
     btn.innerHTML = '<span class="rec-dot"></span> Re-record';
 }
 
-function submitTask() {
+async function submitTask() {
+    const btn = document.getElementById('btnSubmitTask');
+    btn.disabled = true;
+    btn.textContent = '⏳ Uploading...';
+
+    const sessionId = getSessionId();
+    let videoUrl = null;
+
+    // Upload video if we have chunks
+    if (recordedChunks.length > 0) {
+        const blob = new Blob(recordedChunks, { type: 'video/webm' });
+        const fileName = `${sessionId}_station${currentStation.id}_${Date.now()}.webm`;
+
+        const { data, error } = await supabase.storage
+            .from('task_videos')
+            .upload(fileName, blob);
+
+        if (!error) {
+            const { data: urlData } = supabase.storage
+                .from('task_videos')
+                .getPublicUrl(fileName);
+            videoUrl = urlData.publicUrl;
+        }
+    }
+
+    // Sync task completion to Supabase
+    await syncProgress(currentStation.id, 'task_completed');
+
+    // Save task metadata
+    if (sessionId) {
+        await supabase.from('hunt_tasks').insert([
+            { session_id: sessionId, station_id: currentStation.id, video_url: videoUrl }
+        ]);
+    }
+
     // Stop stream
     if (mediaStream) mediaStream.getTracks().forEach(t => t.stop());
-    clearInterval(timerInterval);
+    if (timerInterval) clearInterval(timerInterval);
 
     // Save that this station was completed without a letter
     const completed = getCompleted();
@@ -328,25 +412,33 @@ window.addEventListener('DOMContentLoaded', () => {
     showScreen('screen-loading');
 
     runLoadingScreen(() => {
-        currentStation = getStationFromURL();
-
-        if (!currentStation) {
-            // No station param: show index/intro
-            showNoStation();
-            return;
+        // If no nickname session yet, show nickname screen
+        if (!getSessionId()) {
+            showScreen('screen-nickname');
+        } else {
+            initGameFlow();
         }
-
-        // Check if already completed
-        const completed = getCompleted();
-        if (completed.includes(currentStation.id)) {
-            showAlreadyDone();
-            return;
-        }
-
-        buildQuestion(currentStation);
-        showScreen('screen-question');
     });
 });
+
+function initGameFlow() {
+    currentStation = getStationFromURL();
+
+    if (!currentStation) {
+        showNoStation();
+        return;
+    }
+
+    // Check if already completed
+    const completed = getCompleted();
+    if (completed.includes(currentStation.id)) {
+        showAlreadyDone();
+        return;
+    }
+
+    buildQuestion(currentStation);
+    showScreen('screen-question');
+}
 
 // ---- No station param fallback ----
 function showNoStation() {

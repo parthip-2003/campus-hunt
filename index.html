@@ -12,6 +12,8 @@
         href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Space+Mono:wght@400;700&display=swap"
         rel="stylesheet" />
     <link rel="stylesheet" href="style.css" />
+    <!-- Supabase SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 
 <body>
@@ -38,6 +40,22 @@
                     <div class="loading-bar" id="loadingBar"></div>
                 </div>
                 <p class="loading-sub">Initializing Station...</p>
+            </div>
+        </div>
+
+        <!-- ===== NICKNAME SCREEN ===== -->
+        <div class="screen" id="screen-nickname">
+            <div class="nickname-container">
+                <div class="nick-icon">👤</div>
+                <h1 class="nick-title">Join the Hunt!</h1>
+                <p class="nick-sub">Enter your name or nickname to start tracking your progress.</p>
+
+                <div class="input-group">
+                    <input type="text" id="nicknameInput" placeholder="Your Amazing Name" maxlength="20" />
+                    <button class="btn-primary" onclick="startHuntSession()">Start Adventure 🚀</button>
+                </div>
+
+                <p class="nick-note">Your progress will be visible to the organizer in real-time!</p>
             </div>
         </div>
 

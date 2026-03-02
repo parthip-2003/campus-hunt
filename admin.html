@@ -10,6 +10,8 @@
         rel="stylesheet" />
     <!-- QR Code library (Local) -->
     <script src="qrcode.min.js"></script>
+    <!-- Supabase SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         *,
         *::before,
@@ -221,11 +223,119 @@
         }
 
         .qr-station-name {
+            padding: 24px;
+            width: 100%;
+            text-align: left;
             font-size: 14px;
             font-weight: 700;
             text-align: center;
             color: var(--text);
             line-height: 1.4;
+        }
+
+        /* LIVE DASHBOARD STYLES */
+        .admin-nav {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 25px;
+            border-bottom: 1px solid var(--card-brd);
+            padding-bottom: 10px;
+        }
+
+        .nav-link {
+            padding: 10px 20px;
+            cursor: pointer;
+            color: var(--text2);
+            font-weight: 600;
+            transition: all 0.2s;
+            border-radius: 8px;
+        }
+
+        .nav-link.active {
+            color: var(--primary2);
+            background: rgba(108, 99, 255, 0.1);
+        }
+
+        .dashboard-container,
+        .gallery-container {
+            display: none;
+        }
+
+        .dashboard-container.active,
+        .gallery-container.active {
+            display: block;
+        }
+
+        .live-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: var(--card);
+            border: 1px solid var(--card-brd);
+            padding: 20px;
+            border-radius: var(--radius);
+        }
+
+        .stat-val {
+            font-size: 32px;
+            font-weight: 800;
+            color: var(--primary2);
+        }
+
+        .stat-label {
+            font-size: 13px;
+            color: var(--text2);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 6px;
+        }
+
+        .status-online {
+            background: var(--green);
+            box-shadow: 0 0 10px var(--green);
+        }
+
+        .video-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+        }
+
+        .video-item {
+            background: var(--bg2);
+            border: 1px solid var(--card-brd);
+            border-radius: 12px;
+            padding: 15px;
+        }
+
+        .video-item video {
+            width: 100%;
+            border-radius: 8px;
+            background: #000;
+        }
+
+        .video-meta {
+            margin-top: 10px;
+            font-size: 13px;
+        }
+
+        .video-nick {
+            font-weight: 700;
+            color: var(--primary2);
+        }
+
+        .video-station {
+            color: var(--text3);
+            float: right;
         }
 
         .qr-letter {
@@ -418,29 +528,73 @@
 
     <div class="config-section">
 
-        <div class="url-config">
-            <div class="url-label">🌐 Enter the base URL where your app is hosted:</div>
-            <div class="url-input-row">
-                <input type="text" class="url-input" id="baseUrlInput"
-                    placeholder="https://your-domain.com/campus-hunt/" value="" />
-                <button class="btn-gen" onclick="generateAllQRs()">Generate QRs ✨</button>
-            </div>
-            <div class="url-note">
-                Each station QR will link to: <code
-                    id="urlPreview">https://your-domain.com/campus-hunt/index.html?station=1</code><br>
-                For local testing use: <code>file:///path/to/campus-hunt/index.html?station=1</code><br>
-                After deployment (e.g. GitHub Pages), enter your deployed URL above.
-            </div>
+        <div class="admin-nav">
+            <div class="nav-link active" onclick="switchTab('qr')">QR Generator</div>
+            <div class="nav-link" onclick="switchTab('live')">Live Tracker 📡</div>
+            <div class="nav-link" onclick="switchTab('tasks')">Task Submissions 📹</div>
         </div>
 
-        <p class="section-title">QR Codes for All Stations</p>
+        <div id="tab-qr" class="dashboard-container active">
+            <div class="url-config">
+                <div class="url-label">🌐 Enter the base URL where your app is hosted:</div>
+                <div class="url-input-row">
+                    <input type="text" class="url-input" id="baseUrlInput"
+                        placeholder="https://your-domain.com/campus-hunt/" value="" />
+                    <button class="btn-gen" onclick="generateAllQRs()">Generate QRs ✨</button>
+                </div>
+                <div class="url-note">
+                    Each station QR will link to: <code id="urlPreview">...</code><br>
+                    After deployment, enter your URL above.
+                </div>
+            </div>
 
-        <div class="print-row">
-            <button class="btn-print-all" onclick="window.print()">🖨️ Print All QR Codes</button>
+            <p class="section-title">QR Codes for All Stations</p>
+            <div class="print-row">
+                <button class="btn-print-all" onclick="window.print()">🖨️ Print All QR Codes</button>
+            </div>
+            <div class="qr-grid" id="qrGrid"></div>
         </div>
 
-        <div class="qr-grid" id="qrGrid">
-            <!-- QR cards generated by JS -->
+        <div id="tab-live" class="dashboard-container">
+            <div class="live-stats">
+                <div class="stat-card">
+                    <div class="stat-val" id="totalHunters">0</div>
+                    <div class="stat-label">Total Hunters</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-val" id="activeStation">0</div>
+                    <div class="stat-label">Completions Today</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-val" id="liveStatus"><span class="status-dot status-online"></span>LIVE</div>
+                    <div class="stat-label">Tracking Status</div>
+                </div>
+            </div>
+
+            <p class="section-title">Active Participant Progress</p>
+            <table class="summary-table">
+                <thead>
+                    <tr>
+                        <th>Hunter Name</th>
+                        <th>Started</th>
+                        <th>Current Station</th>
+                        <th>Last Action</th>
+                    </tr>
+                </thead>
+                <tbody id="liveProgressTable">
+                    <tr>
+                        <td colspan="4" style="text-align:center;color:var(--text3)">Waiting for participants...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div id="tab-tasks" class="gallery-container">
+            <p class="section-title">Fun Task Video Gallery</p>
+            <div class="video-grid" id="taskGallery">
+                <p style="grid-column: 1/-1; text-align:center; color:var(--text3); padding:40px;">No video tasks
+                    submitted yet</p>
+            </div>
         </div>
 
         <p class="section-title">Station Summary</p>
@@ -459,10 +613,28 @@
 
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
     <script src="data.js"></script>
     <script>
-        let currentBase = '';
+        // Supabase Configuration (Using your project keys)
+        const SUPABASE_URL = 'https://vskalrepzuzaneglzdez.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZza2FscmVwenV6YW5lZ2x6ZGV6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTY5OTY1OTYsImV4cCI6MjAzMjU3MjU5Nn0.aWd31fqNw-4w6Dwk-sD8CQ_umT2tBhZ';
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+        let currentBase = '';
+        let participants = {};
+
+        // --- Tab Switching ---
+        function switchTab(tabId) {
+            document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+            document.querySelectorAll('.dashboard-container, .gallery-container').forEach(c => c.classList.remove('active'));
+
+            event.target.classList.add('active');
+            document.getElementById('tab-' + tabId).classList.add('active');
+        }
+
+        // --- QR Generator Logic ---
         function getBaseUrl() {
             let base = document.getElementById('baseUrlInput').value.trim();
             if (!base) base = window.location.href.replace('admin.html', '');
@@ -475,8 +647,6 @@
             document.getElementById('urlPreview').textContent = base + 'index.html?station=1';
         }
 
-        document.getElementById('baseUrlInput').addEventListener('input', updateUrlPreview);
-
         async function generateAllQRs() {
             const base = getBaseUrl();
             currentBase = base;
@@ -487,106 +657,133 @@
                 const url = base + 'index.html?station=' + station.id;
                 const card = document.createElement('div');
                 card.className = 'qr-card';
-                card.id = 'qr-card-' + station.id;
-
                 card.innerHTML = `
-        <div class="qr-station-badge">STATION ${station.id}</div>
-        <div class="qr-canvas-wrap" id="qr-wrap-${station.id}"></div>
-        <div class="qr-station-name">${station.name}</div>
-        <div class="qr-letter" title="Secret letter">🔐 ${station.secretLetter}</div>
-        <div class="qr-url">${url}</div>
-        <button class="btn-download" onclick="downloadQR(${station.id}, '${station.name.replace(/'/g, '')}')">
-          ⬇️ Download PNG
-        </button>
-      `;
+                    <div class="qr-station-badge">STATION ${station.id}</div>
+                    <div class="qr-canvas-wrap" id="qr-wrap-${station.id}"></div>
+                    <div class="qr-station-name">${station.name}</div>
+                    <div class="qr-letter" title="Secret letter">🔐 ${station.secretLetter}</div>
+                    <div class="qr-url">${url}</div>
+                    <button class="btn-download" onclick="downloadQR(${station.id}, '${station.name.replace(/'/g, '')}')">⬇️ Download PNG</button>
+                `;
                 grid.appendChild(card);
 
-                // Generate QR
                 const wrap = document.getElementById('qr-wrap-' + station.id);
                 const canvas = document.createElement('canvas');
                 canvas.id = 'qr-canvas-' + station.id;
                 try {
-                    await QRCode.toCanvas(canvas, url, {
-                        width: 180,
-                        margin: 1,
-                        color: { dark: '#000000', light: '#ffffff' }
-                    });
+                    await QRCode.toCanvas(canvas, url, { width: 180, margin: 1 });
                     wrap.appendChild(canvas);
                 } catch (err) {
-                    wrap.innerHTML = '<p style="color:red;font-size:12px">QR Error: ' + err.message + '</p>';
+                    wrap.innerHTML = `<p style="color:red">QR Error</p>`;
                 }
             }
-
-            updateUrlPreview();
         }
 
-        function downloadQR(stationId, stationName) {
-            const canvas = document.getElementById('qr-canvas-' + stationId);
-            if (!canvas) { alert('Please generate QRs first!'); return; }
-
-            // Create a larger canvas with label
+        function downloadQR(id, name) {
+            const canvas = document.getElementById('qr-canvas-' + id);
             const out = document.createElement('canvas');
             out.width = 280; out.height = 340;
             const ctx = out.getContext('2d');
-
-            // Background
-            ctx.fillStyle = '#ffffff';
-            ctx.fillRect(0, 0, out.width, out.height);
-
-            // QR code centered
+            ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, 280, 340);
             ctx.drawImage(canvas, 50, 20, 180, 180);
-
-            // Station label
-            ctx.fillStyle = '#0a0b0f';
-            ctx.font = 'bold 14px Outfit, sans-serif';
-            ctx.textAlign = 'center';
-            ctx.fillText('CAMPUS HUNT', out.width / 2, 225);
-            ctx.font = '13px Outfit, sans-serif';
-            ctx.fillStyle = '#555';
-            ctx.fillText(stationName, out.width / 2, 248);
-
-            // Secret letter hint
-            ctx.font = 'bold 11px Outfit, sans-serif';
-            ctx.fillStyle = '#00a080';
-            ctx.fillText('Scan to begin your challenge! 🔍', out.width / 2, 278);
-
-            // Border
-            ctx.strokeStyle = '#e0e0e0';
-            ctx.lineWidth = 2;
-            ctx.strokeRect(1, 1, out.width - 2, out.height - 2);
-
+            ctx.fillStyle = '#000'; ctx.font = 'bold 14px Outfit'; ctx.textAlign = 'center';
+            ctx.fillText('CAMPUS HUNT', 140, 225);
+            ctx.fillText(name, 140, 245);
             const link = document.createElement('a');
-            link.download = 'campus-hunt-station-' + stationId + '.png';
-            link.href = out.toDataURL('image/png');
+            link.download = `station-${id}.png`;
+            link.href = out.toDataURL();
             link.click();
         }
 
-        function buildSummaryTable() {
-            const tbody = document.getElementById('summaryBody');
-            tbody.innerHTML = '';
-            STATION_DATA.forEach(s => {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-        <td style="font-family:'Space Mono',monospace;font-weight:700;color:var(--primary2)">${s.id}</td>
-        <td>
-          <div style="font-weight:600">${s.name}</div>
-        </td>
-        <td><span class="tbl-letter">${s.secretLetter}</span></td>
-        <td style="max-width:250px;font-size:13px;color:var(--text2)">${s.question}</td>
-        <td class="tbl-wrong" style="max-width:200px;font-size:12px">${s.funTask}</td>
-      `;
-                tbody.appendChild(tr);
+        // --- Real-time Logic ---
+        async function loadInitialData() {
+            const { data: sessions } = await supabase.from('hunt_sessions').select('*');
+            sessions?.forEach(s => participants[s.id] = { ...s, progress: [] });
+
+            const { data: progress } = await supabase.from('hunt_progress').select('*').order('completed_at', { ascending: true });
+            progress?.forEach(p => {
+                if (participants[p.session_id]) participants[p.session_id].progress.push(p);
             });
+
+            renderDashboard();
+            loadVideos();
         }
 
-        // Init
+        function subscribeToUpdates() {
+            supabase.channel('custom-all-channel')
+                .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'hunt_sessions' }, payload => {
+                    participants[payload.new.id] = { ...payload.new, progress: [] };
+                    renderDashboard();
+                })
+                .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'hunt_progress' }, payload => {
+                    if (participants[payload.new.session_id]) {
+                        participants[payload.new.session_id].progress.push(payload.new);
+                        renderDashboard();
+                    }
+                })
+                .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'hunt_tasks' }, payload => {
+                    addVideoToGallery(payload.new);
+                })
+                .subscribe();
+        }
+
+        function renderDashboard() {
+            const table = document.getElementById('liveProgressTable');
+            table.innerHTML = '';
+            const sessionList = Object.values(participants).sort((a, b) => new Date(b.start_time) - new Date(a.start_time));
+
+            document.getElementById('totalHunters').textContent = sessionList.length;
+            let totalComp = 0;
+
+            sessionList.forEach(s => {
+                const lastProg = s.progress[s.progress.length - 1];
+                totalComp += s.progress.length;
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td style="font-weight:700">${s.nickname || 'Anonymous'}</td>
+                    <td style="font-size:12px;color:var(--text3)">${new Date(s.start_time).toLocaleTimeString()}</td>
+                    <td><span class="qr-station-badge">Station ${lastProg ? lastProg.station_id : '0'}</span></td>
+                    <td style="font-size:12px">${lastProg ? (lastProg.status === 'correct' ? '✅ Answered' : '🎭 Fun Task') : '🏁 Joined'}</td>
+                `;
+                table.appendChild(tr);
+            });
+            document.getElementById('activeStation').textContent = totalComp;
+        }
+
+        async function loadVideos() {
+            const { data: tasks } = await supabase.from('hunt_tasks').select('*').order('created_at', { ascending: false });
+            const gallery = document.getElementById('taskGallery');
+            if (tasks && tasks.length > 0) gallery.innerHTML = '';
+            tasks?.forEach(t => addVideoToGallery(t));
+        }
+
+        function addVideoToGallery(task) {
+            const gallery = document.getElementById('taskGallery');
+            if (gallery.innerHTML.includes('No video tasks')) gallery.innerHTML = '';
+
+            const nick = participants[task.session_id]?.nickname || 'Someone';
+            const div = document.createElement('div');
+            div.className = 'video-item';
+            div.innerHTML = `
+                <video src="${task.video_url}" controls></video>
+                <div class="video-meta">
+                    <span class="video-nick">👤 ${nick}</span>
+                    <span class="video-station">📍 Station ${task.station_id}</span>
+                </div>
+            `;
+            gallery.prepend(div);
+        }
+
+        // --- Init ---
         window.addEventListener('DOMContentLoaded', () => {
-            buildSummaryTable();
-            // Auto-generate with current page as base
             const autoBase = window.location.href.replace('admin.html', '');
             document.getElementById('baseUrlInput').value = autoBase;
+            document.getElementById('baseUrlInput').addEventListener('input', updateUrlPreview);
             updateUrlPreview();
             generateAllQRs();
+
+            loadInitialData();
+            subscribeToUpdates();
         });
     </script>
 </body>
