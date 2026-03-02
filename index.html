@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Campus Hunt 🔍 | Station Challenge</title>
+    <meta name="description" content="Campus QR Scavenger Hunt - Scan, Answer, Explore!" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Space+Mono:wght@400;700&display=swap"
+        rel="stylesheet" />
+    <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+
+    <!-- Animated background particles -->
+    <div class="bg-particles" id="particles"></div>
+
+    <!-- App wrapper -->
+    <div class="app" id="app">
+
+        <!-- ===== LOADING SCREEN ===== -->
+        <div class="screen active" id="screen-loading">
+            <div class="loading-content">
+                <div class="loading-logo">
+                    <div class="logo-ring"></div>
+                    <div class="logo-icon">🔍</div>
+                </div>
+                <div class="loading-text">
+                    <span>C</span><span>A</span><span>M</span><span>P</span><span>U</span><span>S</span>
+                    <span class="gap"> </span>
+                    <span>H</span><span>U</span><span>N</span><span>T</span>
+                </div>
+                <div class="loading-bar-wrap">
+                    <div class="loading-bar" id="loadingBar"></div>
+                </div>
+                <p class="loading-sub">Initializing Station...</p>
+            </div>
+        </div>
+
+        <!-- ===== QUESTION SCREEN ===== -->
+        <div class="screen" id="screen-question">
+            <div class="station-badge" id="stationBadge">
+                <span class="badge-icon">📍</span>
+                <span id="stationName">Station 1</span>
+            </div>
+
+            <div class="question-card">
+                <div class="card-glow"></div>
+                <div class="question-header">
+                    <div class="q-icon">❓</div>
+                    <div class="q-meta">
+                        <span class="q-label">QUESTION</span>
+                        <span class="q-progress" id="qProgress">Station 1 of 7</span>
+                    </div>
+                </div>
+
+                <h2 class="question-text" id="questionText">Loading question...</h2>
+
+                <div class="options-grid" id="optionsGrid">
+                    <!-- Options dynamically rendered -->
+                </div>
+
+                <div class="hint-strip">
+                    <span>💡</span> Read the question carefully before answering!
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== CORRECT ANSWER SCREEN ===== -->
+        <div class="screen" id="screen-correct">
+            <div class="correct-container">
+                <div class="success-burst">
+                    <div class="burst-ring"></div>
+                    <div class="burst-ring r2"></div>
+                    <div class="burst-ring r3"></div>
+                    <div class="burst-icon">✨</div>
+                </div>
+
+                <h1 class="correct-title">Brilliant!</h1>
+                <p class="correct-sub">You answered correctly!</p>
+
+                <div class="secret-letter-reveal">
+                    <div class="letter-label">🔐 Your Secret Letter</div>
+                    <div class="letter-box" id="secretLetter">?</div>
+                    <div class="letter-hint">Collect all 7 letters to reveal the final answer!</div>
+                </div>
+
+                <div class="clue-card" id="nextClueCard">
+                    <div class="clue-header">
+                        <span>🗺️</span> Next Station Clue
+                    </div>
+                    <p class="clue-text" id="nextClueText">Loading clue...</p>
+                </div>
+
+                <div class="progress-letters" id="progressLetters">
+                    <!-- Collected letters display -->
+                </div>
+
+                <button class="btn-primary" id="btnGotIt" onclick="markStationComplete()">
+                    Got it! 🚀
+                </button>
+            </div>
+        </div>
+
+        <!-- ===== WRONG ANSWER SCREEN ===== -->
+        <div class="screen" id="screen-wrong">
+            <div class="wrong-container">
+                <div class="wrong-icon">😬</div>
+                <h1 class="wrong-title">Oops! Wrong Answer</h1>
+                <p class="wrong-sub">But don't worry — complete a fun challenge to proceed!</p>
+
+                <div class="task-card" id="taskCard">
+                    <div class="task-header">
+                        <span>🎭</span> Your Fun Task
+                    </div>
+                    <p class="task-text" id="taskText">Loading task...</p>
+                </div>
+
+                <div class="video-recorder-section">
+                    <div class="recorder-label">📹 Record yourself completing the task</div>
+
+                    <div class="video-preview-wrap">
+                        <video id="videoPreview" autoplay muted playsinline></video>
+                        <div class="video-overlay" id="videoOverlay">
+                            <div class="video-placeholder-icon">📷</div>
+                            <p>Camera will appear here</p>
+                        </div>
+                    </div>
+
+                    <div class="recorder-controls">
+                        <button class="btn-cam" id="btnStartCam" onclick="startCamera()">
+                            📷 Start Camera
+                        </button>
+                        <button class="btn-record" id="btnRecord" onclick="toggleRecording()" disabled>
+                            <span class="rec-dot"></span> Start Recording
+                        </button>
+                        <button class="btn-submit-task" id="btnSubmitTask" onclick="submitTask()" disabled>
+                            ✅ Task Done! Unlock Clue
+                        </button>
+                    </div>
+
+                    <div class="timer-display" id="timerDisplay" style="display:none">
+                        <span class="rec-live">● REC</span>
+                        <span id="timerCount">0:00</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== TASK COMPLETE / CLUE UNLOCK SCREEN ===== -->
+        <div class="screen" id="screen-task-done">
+            <div class="task-done-container">
+                <div class="taskdone-icon">🎉</div>
+                <h1 class="taskdone-title">Task Complete!</h1>
+                <p class="taskdone-sub">Great job! Here's your next clue:</p>
+
+                <div class="clue-card unlock-glow">
+                    <div class="clue-header">
+                        <span>🗺️</span> Next Station Clue
+                    </div>
+                    <p class="clue-text" id="nextClueTextWrong">Loading clue...</p>
+                </div>
+
+                <div class="wrong-letter-note">
+                    <span>⚠️</span> You did NOT collect a secret letter at this station.
+                </div>
+
+                <button class="btn-primary" onclick="markStationComplete()">
+                    Onwards! 🏃
+                </button>
+            </div>
+        </div>
+
+        <!-- ===== FINAL COMPLETE SCREEN ===== -->
+        <div class="screen" id="screen-final">
+            <div class="final-container">
+                <div class="confetti-wrap" id="confettiWrap"></div>
+                <div class="final-trophy">🏆</div>
+                <h1 class="final-title">Hunt Complete!</h1>
+                <p class="final-sub">You've completed all stations! Assemble your secret word:</p>
+
+                <div class="final-letters" id="finalLetters">
+                    <!-- Final collected letters -->
+                </div>
+
+                <div class="final-word-box" id="finalWordBox">
+                    <div class="word-label">🔑 Secret Word</div>
+                    <div class="word-display" id="wordDisplay">_ _ _ _ _ _ _</div>
+                </div>
+
+                <p class="final-note">Show this to the organizer to claim your prize! 🎁</p>
+            </div>
+        </div>
+
+    </div><!-- end .app -->
+
+    <script src="data.js"></script>
+    <script src="app.js"></script>
+</body>
+
+</html>
