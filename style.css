@@ -604,6 +604,7 @@ body {
     font-weight: 900;
     background: linear-gradient(135deg, var(--green), #00c896);
     -webkit-background-clip: text;
+    background-clip: text;
     -webkit-text-fill-color: transparent;
 }
 
@@ -1133,6 +1134,7 @@ body {
     font-weight: 900;
     background: linear-gradient(135deg, #ffd166, #ff6b35);
     -webkit-background-clip: text;
+    background-clip: text;
     -webkit-text-fill-color: transparent;
 }
 
