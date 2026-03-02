@@ -516,7 +516,7 @@
     <div class="admin-header">
         <div class="admin-logo">🔍</div>
         <div class="admin-title">
-            <h1>Campus Hunt — Admin Panel</h1>
+            <h1>Campus Hunt — Admin Panel v1.1</h1>
             <p>Generate & print QR codes for all 7 stations</p>
         </div>
         <div class="badge-admin">⚙️ ORGANIZER</div>
@@ -802,8 +802,10 @@
 
         // --- Init ---
         window.addEventListener('DOMContentLoaded', () => {
+            console.log('Admin Panel Initializing...');
             // Initialize Supabase safely
             if (window.supabase) {
+                console.log('Supabase SDK detected.');
                 supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
             } else {
                 console.error("Supabase SDK not loaded!");
@@ -813,13 +815,19 @@
             document.getElementById('baseUrlInput').value = autoBase;
             document.getElementById('baseUrlInput').addEventListener('input', updateUrlPreview);
             updateUrlPreview();
+
+            console.log('Generating QRs...');
             generateAllQRs();
+
+            console.log('Building Summary Table...');
             buildSummaryTable();
 
             if (supabase) {
+                console.log('Loading Initial Data...');
                 loadInitialData();
                 subscribeToUpdates();
             }
+            console.log('Initialization Complete.');
         });
     </script>
 </body>
