@@ -516,7 +516,7 @@
     <div class="admin-header">
         <div class="admin-logo">🔍</div>
         <div class="admin-title">
-            <h1>Campus Hunt — Admin Panel v1.1</h1>
+            <h1>Campus Hunt — Admin Panel v1.2</h1>
             <p>Generate & print QR codes for all 7 stations</p>
         </div>
         <div class="badge-admin">⚙️ ORGANIZER</div>
@@ -801,8 +801,10 @@
         }
 
         // --- Init ---
-        window.addEventListener('DOMContentLoaded', () => {
-            console.log('Admin Panel Initializing...');
+        function init() {
+            const version = "1.2";
+            console.log('Campus Hunt Admin v' + version + ' starting...');
+
             // Initialize Supabase safely
             if (window.supabase) {
                 console.log('Supabase SDK detected.');
@@ -816,11 +818,14 @@
             document.getElementById('baseUrlInput').addEventListener('input', updateUrlPreview);
             updateUrlPreview();
 
-            console.log('Generating QRs...');
-            generateAllQRs();
+            console.log('STATION_DATA check:', typeof STATION_DATA !== 'undefined' ? 'Found' : 'MISSING');
 
-            console.log('Building Summary Table...');
-            buildSummaryTable();
+            if (typeof STATION_DATA !== 'undefined') {
+                console.log('Generating QRs...');
+                generateAllQRs();
+                console.log('Building Summary Table...');
+                buildSummaryTable();
+            }
 
             if (supabase) {
                 console.log('Loading Initial Data...');
@@ -828,7 +833,15 @@
                 subscribeToUpdates();
             }
             console.log('Initialization Complete.');
-        });
+        }
+
+        // --- Safe Startup ---
+        console.log('Script reached. ReadyState:', document.readyState);
+        if (document.readyState === 'loading') {
+            window.addEventListener('DOMContentLoaded', init);
+        } else {
+            init();
+        }
     </script>
 </body>
 
