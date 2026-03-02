@@ -524,74 +524,24 @@
 
     <div class="config-section">
 
-        <div class="admin-nav">
-            <div class="nav-link active" onclick="switchTab('qr', this)">QR Generator</div>
-            <div class="nav-link" onclick="switchTab('live', this)">Live Tracker 📡</div>
-            <div class="nav-link" onclick="switchTab('tasks', this)">Task Submissions 📹</div>
-        </div>
-
-        <div id="tab-qr" class="dashboard-container active">
-            <div class="url-config">
-                <div class="url-label">🌐 Enter the base URL where your app is hosted:</div>
-                <div class="url-input-row">
-                    <input type="text" class="url-input" id="baseUrlInput"
-                        placeholder="https://your-domain.com/campus-hunt/" value="" />
-                    <button class="btn-gen" onclick="generateAllQRs()">Generate QRs ✨</button>
-                </div>
-                <div class="url-note">
-                    Each station QR will link to: <code id="urlPreview">...</code><br>
-                    After deployment, enter your URL above.
-                </div>
+        <div class="url-config">
+            <div class="url-label">🌐 Enter the base URL where your app is hosted:</div>
+            <div class="url-input-row">
+                <input type="text" class="url-input" id="baseUrlInput"
+                    placeholder="https://your-domain.com/campus-hunt/" value="" />
+                <button class="btn-gen" onclick="generateAllQRs()">Generate QRs ✨</button>
             </div>
-
-            <p class="section-title">QR Codes for All Stations</p>
-            <div class="print-row">
-                <button class="btn-print-all" onclick="window.print()">🖨️ Print All QR Codes</button>
-            </div>
-            <div class="qr-grid" id="qrGrid"></div>
-        </div>
-
-        <div id="tab-live" class="dashboard-container">
-            <div class="live-stats">
-                <div class="stat-card">
-                    <div class="stat-val" id="totalHunters">0</div>
-                    <div class="stat-label">Total Hunters</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-val" id="activeStation">0</div>
-                    <div class="stat-label">Completions Today</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-val" id="liveStatus"><span class="status-dot status-online"></span>LIVE</div>
-                    <div class="stat-label">Tracking Status</div>
-                </div>
-            </div>
-
-            <p class="section-title">Active Participant Progress</p>
-            <table class="summary-table">
-                <thead>
-                    <tr>
-                        <th>Hunter Name</th>
-                        <th>Started</th>
-                        <th>Current Station</th>
-                        <th>Last Action</th>
-                    </tr>
-                </thead>
-                <tbody id="liveProgressTable">
-                    <tr>
-                        <td colspan="4" style="text-align:center;color:var(--text3)">Waiting for participants...</td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-
-        <div id="tab-tasks" class="gallery-container">
-            <p class="section-title">Fun Task Video Gallery</p>
-            <div class="video-grid" id="taskGallery">
-                <p style="grid-column: 1/-1; text-align:center; color:var(--text3); padding:40px;">No video tasks
-                    submitted yet</p>
+            <div class="url-note">
+                Each station QR will link to: <code id="urlPreview">...</code><br>
+                After deployment, enter your URL above.
             </div>
         </div>
+
+        <p class="section-title">QR Codes for All Stations</p>
+        <div class="print-row">
+            <button class="btn-print-all" onclick="window.print()">🖨️ Print All QR Codes</button>
+        </div>
+        <div class="qr-grid" id="qrGrid"></div>
 
         <p class="section-title">Station Summary</p>
         <table class="summary-table">
@@ -609,32 +559,10 @@
 
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="qrcode.min.js"></script>
     <script src="data.js"></script>
     <script>
-        // Configuration
-        const SUPABASE_URL = 'https://vskalrepzuzaneglzdez.supabase.co';
-        const SUPABASE_ANON_KEY = 'sb_publishable_aWd31fqNw-4w6Dwk-sD8CQ_umT2tBhZ';
-
-        let supabase;
         let currentBase = '';
-        let participants = {};
-
-        // --- Tab Switching ---
-        function switchTab(tabId, el) {
-            document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
-            document.querySelectorAll('.dashboard-container, .gallery-container').forEach(c => c.classList.remove('active'));
-
-            if (el) el.classList.add('active');
-            else {
-                // Fallback for auto-init
-                document.querySelectorAll('.nav-link').forEach(link => {
-                    if (link.getAttribute('onclick').includes(`'${tabId}'`)) link.classList.add('active');
-                });
-            }
-            document.getElementById('tab-' + tabId).classList.add('active');
-        }
 
         // --- QR Generator Logic ---
         function getBaseUrl() {
@@ -719,124 +647,19 @@
             });
         }
 
-        // --- Real-time Logic ---
-        async function loadInitialData() {
-            if (!supabase) return;
-            const { data: sessions } = await supabase.from('hunt_sessions').select('*');
-            sessions?.forEach(s => participants[s.id] = { ...s, progress: [] });
-
-            const { data: progress } = await supabase.from('hunt_progress').select('*').order('completed_at', { ascending: true });
-            progress?.forEach(p => {
-                if (participants[p.session_id]) participants[p.session_id].progress.push(p);
-            });
-
-            renderDashboard();
-            loadVideos();
-        }
-
-
-        function subscribeToUpdates() {
-            supabase.channel('custom-all-channel')
-                .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'hunt_sessions' }, payload => {
-                    participants[payload.new.id] = { ...payload.new, progress: [] };
-                    renderDashboard();
-                })
-                .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'hunt_progress' }, payload => {
-                    if (participants[payload.new.session_id]) {
-                        participants[payload.new.session_id].progress.push(payload.new);
-                        renderDashboard();
-                    }
-                })
-                .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'hunt_tasks' }, payload => {
-                    addVideoToGallery(payload.new);
-                })
-                .subscribe();
-        }
-
-        function renderDashboard() {
-            const table = document.getElementById('liveProgressTable');
-            table.innerHTML = '';
-            const sessionList = Object.values(participants).sort((a, b) => new Date(b.start_time) - new Date(a.start_time));
-
-            document.getElementById('totalHunters').textContent = sessionList.length;
-            let totalComp = 0;
-
-            sessionList.forEach(s => {
-                const lastProg = s.progress[s.progress.length - 1];
-                totalComp += s.progress.length;
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td style="font-weight:700">${s.nickname || 'Anonymous'}</td>
-                    <td style="font-size:12px;color:var(--text3)">${new Date(s.start_time).toLocaleTimeString()}</td>
-                    <td><span class="qr-station-badge">Station ${lastProg ? lastProg.station_id : '0'}</span></td>
-                    <td style="font-size:12px">${lastProg ? (lastProg.status === 'correct' ? '✅ Answered' : '🎭 Fun Task') : '🏁 Joined'}</td>
-                `;
-                table.appendChild(tr);
-            });
-            document.getElementById('activeStation').textContent = totalComp;
-        }
-
-        async function loadVideos() {
-            const { data: tasks } = await supabase.from('hunt_tasks').select('*').order('created_at', { ascending: false });
-            const gallery = document.getElementById('taskGallery');
-            if (tasks && tasks.length > 0) gallery.innerHTML = '';
-            tasks?.forEach(t => addVideoToGallery(t));
-        }
-
-        function addVideoToGallery(task) {
-            const gallery = document.getElementById('taskGallery');
-            if (gallery.innerHTML.includes('No video tasks')) gallery.innerHTML = '';
-
-            const nick = participants[task.session_id]?.nickname || 'Someone';
-            const div = document.createElement('div');
-            div.className = 'video-item';
-            div.innerHTML = `
-                <video src="${task.video_url}" controls></video>
-                <div class="video-meta">
-                    <span class="video-nick">👤 ${nick}</span>
-                    <span class="video-station">📍 Station ${task.station_id}</span>
-                </div>
-            `;
-            gallery.prepend(div);
-        }
-
         // --- Init ---
         function init() {
-            const version = "1.2";
-            console.log('Campus Hunt Admin v' + version + ' starting...');
-
-            // Initialize Supabase safely
-            if (window.supabase) {
-                console.log('Supabase SDK detected.');
-                supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-            } else {
-                console.error("Supabase SDK not loaded!");
-            }
-
             const autoBase = window.location.href.replace('admin.html', '');
             document.getElementById('baseUrlInput').value = autoBase;
             document.getElementById('baseUrlInput').addEventListener('input', updateUrlPreview);
             updateUrlPreview();
 
-            console.log('STATION_DATA check:', typeof STATION_DATA !== 'undefined' ? 'Found' : 'MISSING');
-
             if (typeof STATION_DATA !== 'undefined') {
-                console.log('Generating QRs...');
                 generateAllQRs();
-                console.log('Building Summary Table...');
                 buildSummaryTable();
             }
-
-            if (supabase) {
-                console.log('Loading Initial Data...');
-                loadInitialData();
-                subscribeToUpdates();
-            }
-            console.log('Initialization Complete.');
         }
 
-        // --- Safe Startup ---
-        console.log('Script reached. ReadyState:', document.readyState);
         if (document.readyState === 'loading') {
             window.addEventListener('DOMContentLoaded', init);
         } else {
