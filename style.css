@@ -898,15 +898,44 @@ body {
     gap: 8px;
 }
 
-.btn-record:hover:not(:disabled) {
-    background: rgba(255, 107, 107, 0.2);
-    box-shadow: var(--glow-r);
+.btn-cam,
+.btn-record,
+.btn-submit-task {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 14px 24px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1.5px solid rgba(255, 255, 255, 0.15);
+    border-radius: 99px;
+    color: var(--text);
+    font-family: 'Outfit', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    white-space: nowrap;
+}
+
+.btn-cam {
+    background: rgba(108, 99, 255, 0.1);
+    border-color: rgba(108, 99, 255, 0.3);
+    color: var(--primary2);
+}
+
+.btn-cam:hover {
+    background: rgba(108, 99, 255, 0.2);
+    box-shadow: var(--glow-p);
+    transform: translateY(-2px);
 }
 
 .btn-record:disabled,
-.btn-submit-task:disabled {
+.btn-submit-task:disabled,
+.btn-cam:disabled {
     opacity: 0.35;
     cursor: not-allowed;
+    transform: none !important;
 }
 
 .btn-record.recording {

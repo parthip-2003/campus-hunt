@@ -245,16 +245,41 @@ function spawnConfetti() {
 }
 
 // ---- Camera ----
+let currentFacingMode = 'user';
+
 async function startCamera() {
     try {
-        mediaStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+        if (mediaStream) {
+            mediaStream.getTracks().forEach(track => track.stop());
+        }
+
+        const constraints = {
+            video: { facingMode: currentFacingMode },
+            audio: false
+        };
+
+        mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
         const preview = document.getElementById('videoPreview');
-        preview.srcObject = mediaStream;
-        preview.style.display = 'block';
-        document.getElementById('videoOverlay').classList.add('hidden');
+        if (preview) {
+            preview.srcObject = mediaStream;
+            preview.style.display = 'block';
+        }
+
+        const overlay = document.getElementById('videoOverlay');
+        if (overlay) overlay.classList.add('hidden');
+
+        // Show switch button if multiple cameras are likely available
+        const switchBtn = document.getElementById('btnSwitchCam');
+        if (switchBtn) switchBtn.style.display = 'inline-flex';
+
     } catch (err) {
         alert('Could not access camera: ' + err.message);
     }
+}
+
+async function switchCamera() {
+    currentFacingMode = (currentFacingMode === 'user') ? 'environment' : 'user';
+    await startCamera();
 }
 
 function submitTask() {
